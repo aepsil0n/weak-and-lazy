@@ -87,3 +87,8 @@ class weak_and_lazy:
         return ref
 
 
+# Execute the doctests if run from the command line.
+# Verbose tests: python event.py -v
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
