@@ -5,6 +5,37 @@
 import weakref
 
 class weak_and_lazy:
+    """
+
+    >>> class Level:
+    ...     def __init__(self, id):
+    ...         print("Created level: %s" % id)
+    ...         self.id = id
+    ...         self.next_level = self.id + 1
+    ...
+    ...     @weak_and_lazy
+    ...     def next_level(self, id):
+    ...         return Level(id)
+
+    >>> first = Level(1)
+    Created level: 1
+    >>> second = first.next_level
+    Created level: 2
+
+    >>> second_weak = weakref.ref(second)
+    >>> assert second_weak() is not None
+    >>> second = None
+    >>> assert second_weak() is None
+
+    >>> second = first.next_level
+    Created level: 2
+
+    >>> second_copy = first.next_level
+    >>> assert second_copy is second
+
+    >>
+
+    """
 
     def __init__(self, function):
         """
