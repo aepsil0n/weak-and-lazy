@@ -28,31 +28,31 @@ class weak_and_lazy:
             # caught to write the new entry into the instance
             # dictionary.  The new entry is an instance of
             # boundref, which exhibits the event behaviour.
-            be = object()
-            instance.__dict__[self._key] = be
-            return be
+            bound = dict()
+            instance.__dict__[self._key] = bound
+            return bound
 
     def __set__(self, instance, value):
         """
         """
         bound = self.__bound(instance)
-        bound.arg = value
+        bound['arg'] = value
 
     def __get__(self, instance, owner):
         """
         """
         bound = self.__bound(instance)
         try:
-            ref = bound.ref()
-        except AttributeError:
+            ref = bound['ref']()
+        except KeyError:
             ref = None
 
         if ref is None:
-            if hasattr(bound, 'arg'):
-                ref = self._function(instance, bound.arg)
+            if 'arg' in bound:
+                ref = self._function(instance, bound['arg'])
             else:
                 ref = self._function(instance)
-            bound.ref = weakref.ref(ref)
+            bound['ref'] = weakref.ref(ref)
         return ref
 
 
