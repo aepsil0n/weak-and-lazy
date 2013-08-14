@@ -4,10 +4,10 @@
 
 import weakref
 
-class weak_and_lazy:
+class weak_and_lazy(object):
     """
 
-    >>> class Level:
+    >>> class Level(object):
     ...     def __init__(self, id):
     ...         print("Created level: %s" % id)
     ...         self.id = id
