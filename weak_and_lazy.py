@@ -41,6 +41,8 @@ class ref(object):
     requirement for picklable classes.
 
     """
+    __slots__ = ['ref', 'args', 'kwargs']
+
     def __init__(self, ref=None, *args, **kwargs):
         """
         Initialize with empty parameter list.
