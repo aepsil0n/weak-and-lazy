@@ -9,7 +9,7 @@ class weak_and_lazy(object):
 
     >>> class Level(object):
     ...     def __init__(self, id):
-    ...         print("Created level: %s" % id)
+    ...         print("Loaded level: %s" % id)
     ...         self.id = id
     ...         self.next_level = self.id + 1
     ...
@@ -18,9 +18,9 @@ class weak_and_lazy(object):
     ...         return Level(id)
 
     >>> first = Level(1)
-    Created level: 1
+    Loaded level: 1
     >>> second = first.next_level
-    Created level: 2
+    Loaded level: 2
 
     >>> second_weak = weakref.ref(second)
     >>> assert second_weak() is not None
@@ -28,62 +28,61 @@ class weak_and_lazy(object):
     >>> assert second_weak() is None
 
     >>> second = first.next_level
-    Created level: 2
+    Loaded level: 2
 
     >>> second_copy = first.next_level
     >>> assert second_copy is second
 
-    >>
 
     """
 
-    def __init__(self, function):
+    def __init__(self, loader):
         """
         """
-        # Copy docstring from function
-        self.__doc__ = function.__doc__
+        # Copy docstring from loader
+        self.__doc__ = loader.__doc__
         # Use its name as key
-        self._key = ' ' + function.__name__
+        self.__key = ' ' + loader.__name__
         # Used to enforce call signature even when no slot is
         # connected.  Can also execute code (called before
         # handlers)
-        self._function = function
+        self.__loader = loader
 
-    def __bound(self, instance):
+    def __data(self, instance):
         try:
             # Try to return the dictionary entry corresponding to
             # the key.
-            return instance.__dict__[self._key]
+            return instance.__dict__[self.__key]
         except KeyError:
             # On the first try this raises a KeyError, The error is
             # caught to write the new entry into the instance
             # dictionary.  The new entry is an instance of
             # boundref, which exhibits the event behaviour.
-            bound = dict()
-            instance.__dict__[self._key] = bound
-            return bound
+            data = dict()
+            instance.__dict__[self.__key] = data
+            return data
 
     def __set__(self, instance, value):
         """
         """
-        bound = self.__bound(instance)
-        bound['arg'] = value
+        data = self.__data(instance)
+        data['arg'] = value
 
     def __get__(self, instance, owner):
         """
         """
-        bound = self.__bound(instance)
+        data = self.__data(instance)
         try:
-            ref = bound['ref']()
+            ref = data['ref']()
         except KeyError:
             ref = None
 
         if ref is None:
-            if 'arg' in bound:
-                ref = self._function(instance, bound['arg'])
+            if 'arg' in data:
+                ref = self.__loader(instance, data['arg'])
             else:
-                ref = self._function(instance)
-            bound['ref'] = weakref.ref(ref)
+                ref = self.__loader(instance)
+            data['ref'] = weakref.ref(ref)
         return ref
 
 
