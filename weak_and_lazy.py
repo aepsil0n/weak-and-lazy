@@ -153,6 +153,22 @@ class weak_and_lazy(object):
 
     >>> assert Level.next_level.__doc__ == '''The next level!'''
 
+    ### Gotcha
+
+    Let's go even further!
+
+    >>> second2 = third.prev_level
+    Loaded level: 2
+    >>> third2 = second.next_level
+    Loaded level: 3
+    >>> second2 is second
+    False
+    >>> third2 is third
+    False
+
+    Oups! One  step too far... Be  careful, this is something  that your
+    loader must to take care of.
+
     """
 
     def __init__(self, loader):

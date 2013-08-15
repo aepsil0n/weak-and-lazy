@@ -5,6 +5,7 @@ Decorator class for weak and lazy references.
 - [Description](#description)
 - [Why use it?](#why-use-it)
 - [Usage example](#usage-example)
+- [Gotcha](#gotcha)
 
 ### Description
 
@@ -96,3 +97,21 @@ What about that sexy docstring of yours?
 ```python
 assert Level.next_level.__doc__ == '''The next level!'''
 ```
+
+### Gotcha
+
+Let's go even further!
+
+```python
+>>> second2 = third.prev_level
+Loaded level: 2
+>>> third2 = second.next_level
+Loaded level: 3
+>>> second2 is second
+False
+>>> third2 is third
+False
+```
+
+Oups! One  step too far... Be  careful, this is something  that your
+loader must to take care of.
