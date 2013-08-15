@@ -157,17 +157,20 @@ class weak_and_lazy(object):
 
     Let's go even further!
 
-    >>> second2 = third.prev_level
+    >>> third.prev_level is second
     Loaded level: 2
-    >>> third2 = second.next_level
-    Loaded level: 3
-    >>> second2 is second
     False
-    >>> third2 is third
+    >>> second.next_level is third
+    Loaded level: 3
     False
 
     Oups! One  step too far... Be  careful, this is something  that your
-    loader must to take care of.
+    loader must to take care of.  You can customly assign the references
+    in order to connect your object graph:
+
+    >>> third.prev_level = weakref.ref(second)
+    >>> second.next_level = weakref.ref(third)
+    >>> assert third.prev_level is second and second.next_level is third
 
     """
 
@@ -181,16 +184,8 @@ class weak_and_lazy(object):
         # handlers)
         self.loader = loader
 
-    def __set__(self, instance, value):
-        """Set reference and parameters for the loader."""
-        instance.__dict__[self.key] = value
-
-    def __get__(self, instance, owner):
-        """Load and return reference to the desired object."""
-        # Allow access via the owner class
-        if instance is None:
-            return self
-        # Get the data associated to the specified instance
+    def __data(self, instance):
+        """Get the data associated to the specified instance."""
         try:
             # Try to return the dictionary entry corresponding to
             # the key.
@@ -201,6 +196,21 @@ class weak_and_lazy(object):
             # dictionary. 
             data = ref()
             instance.__dict__[self.key] = data
+        return data
+
+    def __set__(self, instance, value):
+        """Set reference and parameters for the loader."""
+        if isinstance(value, weakref.ref):
+            self.__data(instance).ref = value
+        else:
+            instance.__dict__[self.key] = value
+
+    def __get__(self, instance, owner):
+        """Load and return reference to the desired object."""
+        # Allow access via the owner class
+        if instance is None:
+            return self
+        data = self.__data(instance)
         try:
             ref = data.ref()
         except AttributeError:
