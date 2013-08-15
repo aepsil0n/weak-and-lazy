@@ -11,6 +11,7 @@ enable verbose mode, run:
 """
 
 import weakref
+import functools
 
 
 class _weak_and_lazy_ref_data(object):
@@ -141,8 +142,7 @@ class weak_and_lazy(object):
 
     def __init__(self, loader):
         """Initialize the attribute with a loader function."""
-        # Copy docstring from loader
-        self.__doc__ = loader.__doc__
+        functools.update_wrapper(self, loader)
         # Use its name as key
         self.__key = ' ' + loader.__name__
         # Used to enforce call signature even when no slot is
@@ -170,7 +170,10 @@ class weak_and_lazy(object):
         self.__data(instance)(value)
 
     def __get__(self, instance, owner):
-        """Load and return the desired object."""
+        """Load and return reference to the desired object."""
+        # Allow access via the owner class
+        if instance is None:
+            return self
         data = self.__data(instance)
         try:
             ref = data.ref()
