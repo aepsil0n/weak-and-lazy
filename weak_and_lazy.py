@@ -4,6 +4,25 @@
 
 import weakref
 
+class weak_and_lazy_ref_data(object):
+    """
+    Picklable instance data class
+
+    weakref.ref is not picklable.
+    """
+    def __getstate__(self):
+        if hasattr(self, 'arg'):
+            return (self.arg,)
+        else:
+            return ()
+
+    def __setstate__(self, state):
+        if len(state) == 0:
+            del self.arg
+        else:
+            self.arg, = state
+
+
 class weak_and_lazy(object):
     """
 
@@ -58,7 +77,7 @@ class weak_and_lazy(object):
             # caught to write the new entry into the instance
             # dictionary.  The new entry is an instance of
             # boundref, which exhibits the event behaviour.
-            data = dict()
+            data = weak_and_lazy_ref_data()
             instance.__dict__[self.__key] = data
             return data
 
@@ -66,23 +85,23 @@ class weak_and_lazy(object):
         """
         """
         data = self.__data(instance)
-        data['arg'] = value
+        data.arg = value
 
     def __get__(self, instance, owner):
         """
         """
         data = self.__data(instance)
         try:
-            ref = data['ref']()
-        except KeyError:
+            ref = data.ref()
+        except AttributeError:
             ref = None
 
         if ref is None:
-            if 'arg' in data:
-                ref = self.__loader(instance, data['arg'])
+            if hasattr(data, 'arg'):
+                ref = self.__loader(instance, data.arg)
             else:
                 ref = self.__loader(instance)
-            data['ref'] = weakref.ref(ref)
+            data.ref = weakref.ref(ref)
         return ref
 
 
