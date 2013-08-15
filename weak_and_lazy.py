@@ -37,8 +37,47 @@ class ref(object):
      - `__init__` initialize from optional hard-reference and argument list
      - `__getstate__` and `__setstate__` to define how pickling works
 
+    Due  to the  use of  `__slots__` instances  of this  class are  very
+    restricted. See also:
+
+    http://docs.python.org/3.3/reference/datamodel.html?highlight=__slots__#object.__slots__
+
+    Defined instance attributes:
+
+     - `ref`                weak reference to loaded object
+     - `args`, `kwargs`     parameters for object loader
+
     The class  is defined  in global  scope because this  seems to  be a
     requirement for picklable classes.
+
+
+    NOTE: some  builtins are not  weak-refable and can therefore  not be
+    used with this class:
+
+    >>> ref(dict()) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    TypeError: cannot create weak reference to 'dict' object
+
+    For such cases you could use trivial inheritances:
+
+    >>> class Dict(dict):
+    ...     pass
+
+    NOTE: `ref` expects  a hard reference in its  constructor but stores
+    only a weak reference:
+
+    >>> d = Dict(Foo="Bar")
+    >>> r = ref(d)
+    >>> assert r.ref() is not None
+    >>> del d
+    >>> assert r.ref() is None
+
+    Objects of this class are picklable:
+
+    >>> import pickle
+    >>> r = ref(Dict(Foo="Bar"), 1, 2, 3, Bar="Foo")
+    >>> p = pickle.loads(pickle.dumps(r))
+    >>> assert p.args == r.args and p.kwargs == r.kwargs
 
     """
     __slots__ = ['ref', 'args', 'kwargs']
