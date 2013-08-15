@@ -1,7 +1,11 @@
 """
 Provides a decorator class for weak and lazy references.
 
-Provides the `weak_and_lazy` decorator class.
+List of objects:
+
+ - weak_and_lazy    decorator class for weak and lazy reference attributes
+ - ref              data class used to bind instance and loader params
+ - defer            convenience wrapper to bind only loader params
 
 Running this module from the command  line will execute the doctests. To
 enable verbose mode, run:
@@ -14,41 +18,42 @@ import weakref
 import functools
 
 
-class _weak_and_lazy_ref_data(object):
+class ref(object):
     """
-    Internal data class for a @weak_and_lazy reference instance.
+    Data class for a @weak_and_lazy reference instance.
 
-    This class is used only internally and as a user you probably do not
-    need to care much about it. It  is implemented as a class and not as
-    a tuple or dictionary for mainly one reason:
+    This class is Used to bind a reference and loader parameters to your
+    lazy reference. It is  implemented as a class and not  as a tuple or
+    dictionary for mainly one reason:
 
      - weakref.ref is not picklable and we do not want to pickle it!
      - the syntax to access object attributes is nicer than tuple or
        dictionary elements
 
     I know these were at least four reasons, but only the second one was
-    really important.
+    really important. (JK)
 
     The following methods are overloaded:
 
-     - `__init__` to create an empty initial paramater set
+     - `__init__` initialize from optional hard-reference and argument list
      - `__getstate__` and `__setstate__` to define how pickling works
-     - `__call__` just for convenince to define the loader parameters
 
     The class  is defined  in global  scope because this  seems to  be a
     requirement for picklable classes.
 
     """
-    def __init__(self):
+    def __init__(self, ref=None, *args, **kwargs):
         """
         Initialize with empty parameter list.
 
-        There is also an attribute called `ref` but this is only created
-        if and when needed.
+        Note `ref`  is expected to be  a hard reference but  only a weak
+        reference will be stored.
 
         """
-        self.args = list()
-        self.kwargs = dict()
+        if ref is not None:
+            self.ref = weakref.ref(ref)
+        self.args = args
+        self.kwargs = kwargs
 
     def __getstate__(self):
         """Pickle the loader parameters."""
@@ -58,11 +63,9 @@ class _weak_and_lazy_ref_data(object):
         """Unpickle the loader parameters."""
         self.args, self.kwargs = state
 
-    def __call__(self, *args, **kwargs):
-        """Set the loader parameters."""
-        self.args = args
-        self.kwargs = kwargs
-
+def defer(*args, **kwargs):
+    """Create parameter object for a lazy reference."""
+    return ref(None, *args, **kwargs)
 
 
 class weak_and_lazy(object):
@@ -102,32 +105,40 @@ class weak_and_lazy(object):
     Define a `Level` class with VERY intense memory requirements:
 
     >>> class Level(object):
-    ...     def __init__(self, id):
+    ...     def __init__(self, id, prev=None, next=None):
     ...         print("Loaded level: %s" % id)
     ...         self.id = id
-    ...         self.next_level = self.id + 1
+    ...         self.prev_level = ref(prev, self.id - 1)
+    ...         self.next_level = ref(next, self.id + 1)
     ...
     ...     @weak_and_lazy
     ...     def next_level(self, id):
-    ...         return Level(id)
+    ...         '''The next level!'''
+    ...         return Level(id, prev=self)
+    ...
+    ...     # alternative syntax:
+    ...     prev_level = weak_and_lazy(lambda self,id: Level(id, next=self))
 
     Besides the  tremendous memory requirements of  any individual level
     it is impossible to load 'all' levels, since these are fundamentally
     infinite in number.
 
-    So let's load the first two levels:
+    So let's load some levels:
 
     >>> first = Level(1)
     Loaded level: 1
     >>> second = first.next_level
     Loaded level: 2
+    >>> third = second.next_level
+    Loaded level: 3
+    >>> second2 = third.prev_level
 
-    Hey, it works! Can the second level be garbage collected even if the
-    first one stays alive?
+    Hey, it works! Notice that the second level is loaded only once? Can
+    it be garbage collected even if the first and third stay alive?
 
     >>> second_weak = weakref.ref(second)
     >>> assert second_weak() is not None
-    >>> second = None
+    >>> second = second2 = None
     >>> assert second_weak() is None
 
     Reload it into memory. As you can see, as long as `second` is in use
@@ -138,49 +149,48 @@ class weak_and_lazy(object):
     >>> second_copy = first.next_level
     >>> assert second_copy is second
 
+    What about that sexy docstring of yours?
+
+    >>> assert Level.next_level.__doc__ == '''The next level!'''
+
     """
 
     def __init__(self, loader):
         """Initialize the attribute with a loader function."""
         functools.update_wrapper(self, loader)
         # Use its name as key
-        self.__key = ' ' + loader.__name__
+        self.key = ' ' + loader.__name__
         # Used to enforce call signature even when no slot is
         # connected.  Can also execute code (called before
         # handlers)
-        self.__loader = loader
-
-    def __data(self, instance):
-        """Get the data associated to the specified instance."""
-        try:
-            # Try to return the dictionary entry corresponding to
-            # the key.
-            return instance.__dict__[self.__key]
-        except KeyError:
-            # On the first try this raises a KeyError, The error is
-            # caught to write the new entry into the instance
-            # dictionary.  The new entry is an instance of
-            # boundref, which exhibits the event behaviour.
-            data = _weak_and_lazy_ref_data()
-            instance.__dict__[self.__key] = data
-            return data
+        self.loader = loader
 
     def __set__(self, instance, value):
-        """Bind a parameter for the loader."""
-        self.__data(instance)(value)
+        """Set reference and parameters for the loader."""
+        instance.__dict__[self.key] = value
 
     def __get__(self, instance, owner):
         """Load and return reference to the desired object."""
         # Allow access via the owner class
         if instance is None:
             return self
-        data = self.__data(instance)
+        # Get the data associated to the specified instance
+        try:
+            # Try to return the dictionary entry corresponding to
+            # the key.
+            data = instance.__dict__[self.key]
+        except KeyError:
+            # On the first try this raises a KeyError, The error is
+            # caught to write the new entry into the instance
+            # dictionary. 
+            data = ref()
+            instance.__dict__[self.key] = data
         try:
             ref = data.ref()
         except AttributeError:
             ref = None
         if ref is None:
-            ref = self.__loader(instance, *data.args, **data.kwargs)
+            ref = self.loader(instance, *data.args, **data.kwargs)
             data.ref = weakref.ref(ref)
         return ref
 
