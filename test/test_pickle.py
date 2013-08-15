@@ -1,13 +1,12 @@
 
 import pickle
-
-from weak_and_lazy import weak_and_lazy, defer
+from weak_and_lazy import weak_and_lazy, ref
 
 
 class Level(object):
     def __init__(self, id):
         self.id = id
-        self.next_level = defer(self.id + 1)
+        self.next_level = ref(None, self.id + 1)
 
     @weak_and_lazy
     def next_level(self, id):

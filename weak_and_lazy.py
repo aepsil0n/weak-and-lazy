@@ -5,7 +5,6 @@ List of objects:
 
  - weak_and_lazy    decorator class for weak and lazy reference attributes
  - ref              data class used to bind instance and loader params
- - defer            convenience wrapper to bind only loader params
 
 Running this module from the command  line will execute the doctests. To
 enable verbose mode, run:
@@ -62,10 +61,6 @@ class ref(object):
     def __setstate__(self, state):
         """Unpickle the loader parameters."""
         self.args, self.kwargs = state
-
-def defer(*args, **kwargs):
-    """Create parameter object for a lazy reference."""
-    return ref(None, *args, **kwargs)
 
 
 class weak_and_lazy(object):
