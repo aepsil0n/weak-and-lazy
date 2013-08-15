@@ -10,17 +10,20 @@ class weak_and_lazy_ref_data(object):
 
     weakref.ref is not picklable.
     """
+    def __init__(self):
+        self.args = list()
+        self.kwargs = dict()
+
     def __getstate__(self):
-        if hasattr(self, 'arg'):
-            return (self.arg,)
-        else:
-            return ()
+        return self.args, self.kwargs
 
     def __setstate__(self, state):
-        if len(state) == 0:
-            del self.arg
-        else:
-            self.arg, = state
+        self.args, self.kwargs = state
+
+    def __call__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
 
 
 class weak_and_lazy(object):
@@ -84,8 +87,7 @@ class weak_and_lazy(object):
     def __set__(self, instance, value):
         """
         """
-        data = self.__data(instance)
-        data.arg = value
+        self.__data(instance)(value)
 
     def __get__(self, instance, owner):
         """
@@ -97,10 +99,7 @@ class weak_and_lazy(object):
             ref = None
 
         if ref is None:
-            if hasattr(data, 'arg'):
-                ref = self.__loader(instance, data.arg)
-            else:
-                ref = self.__loader(instance)
+            ref = self.__loader(instance, *data.args, **data.kwargs)
             data.ref = weakref.ref(ref)
         return ref
 
