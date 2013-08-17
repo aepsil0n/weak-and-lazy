@@ -69,7 +69,7 @@ Loaded level: 1
 Loaded level: 2
 >>> third = second.next_level
 Loaded level: 3
->>> second2 = third.prev_level
+>>> assert third.prev_level is second
 ```
 
 Hey, it works! Notice that the second level is loaded only once? Can
@@ -78,7 +78,7 @@ it be garbage collected even if the first and third stay alive?
 ```python
 second_weak = weakref.ref(second)
 assert second_weak() is not None
-second = second2 = None
+second = None
 assert second_weak() is None
 ```
 
@@ -88,8 +88,7 @@ it will not be loaded again.
 ```python
 >>> second = first.next_level
 Loaded level: 2
->>> second_copy = first.next_level
->>> assert second_copy is second
+>>> assert first.next_level is second
 ```
 
 What about that sexy docstring of yours?

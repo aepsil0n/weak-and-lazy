@@ -1,5 +1,20 @@
+# encoding=utf-8
 """
 Provides a decorator class for weak and lazy references.
+
+### License
+
+Copyright © 2013 Thomas Gläßle <t_glaessle@gmx.de>
+
+This work  is free. You can  redistribute it and/or modify  it under the
+terms of the Do What The Fuck  You Want To Public License, Version 2, as
+published by Sam Hocevar. See the COPYING file for more details.
+
+This program  is free software.  It comes  without any warranty,  to the
+extent permitted by applicable law.
+
+
+### Overview
 
 List of objects:
 
@@ -167,14 +182,14 @@ class weak_and_lazy(object):
     Loaded level: 2
     >>> third = second.next_level
     Loaded level: 3
-    >>> second2 = third.prev_level
+    >>> assert third.prev_level is second
 
     Hey, it works! Notice that the second level is loaded only once? Can
     it be garbage collected even if the first and third stay alive?
 
     >>> second_weak = weakref.ref(second)
     >>> assert second_weak() is not None
-    >>> second = second2 = None
+    >>> second = None
     >>> assert second_weak() is None
 
     Reload it into memory. As you can see, as long as `second` is in use
@@ -182,8 +197,7 @@ class weak_and_lazy(object):
 
     >>> second = first.next_level
     Loaded level: 2
-    >>> second_copy = first.next_level
-    >>> assert second_copy is second
+    >>> assert first.next_level is second
 
     What about that sexy docstring of yours?
 
