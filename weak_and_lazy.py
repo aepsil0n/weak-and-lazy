@@ -228,7 +228,7 @@ class weak_and_lazy(object):
         """Initialize the attribute with a loader function."""
         functools.update_wrapper(self, loader)
         # Use its name as key
-        self.key = ' ' + loader.__name__
+        self.key = loader.__name__
         # Used to enforce call signature even when no slot is
         # connected.  Can also execute code (called before
         # handlers)
@@ -259,7 +259,11 @@ class weak_and_lazy(object):
         """Load and return reference to the desired object."""
         # Allow access via the owner class
         if instance is None:
-            return self
+            @functools.wraps(self.loader)
+            def wrapper(instance, *args, **kwargs):
+                return self.__get__(instance, owner)(*args, **kwargs)
+            return wrapper
+        # Handle access to the instance attribute
         data = self.__data(instance)
         try:
             ref = data.ref()
