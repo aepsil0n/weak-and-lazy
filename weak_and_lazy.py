@@ -243,7 +243,7 @@ class weak_and_lazy(object):
         except KeyError:
             # On the first try this raises a KeyError, The error is
             # caught to write the new entry into the instance
-            # dictionary. 
+            # dictionary.
             data = ref()
             instance.__dict__[self.key] = data
         return data
@@ -252,6 +252,8 @@ class weak_and_lazy(object):
         """Set reference and parameters for the loader."""
         if isinstance(value, weakref.ref):
             self.__data(instance).ref = value
+        elif value is None:
+            instance.__dict__[self.key] = ref()
         else:
             instance.__dict__[self.key] = value
 
@@ -266,13 +268,14 @@ class weak_and_lazy(object):
         # Handle access to the instance attribute
         data = self.__data(instance)
         try:
-            ref = data.ref()
+            data_ref = data.ref()
         except AttributeError:
-            ref = None
-        if ref is None:
-            ref = self.loader(instance, *data.args, **data.kwargs)
-            data.ref = weakref.ref(ref)
-        return ref
+            data_ref = None
+        if data_ref is None:
+            data_ref = self.loader(instance, *data.args, **data.kwargs)
+            if data_ref is not None:
+                data.ref = weakref.ref(data_ref)
+        return data_ref
 
 
 # Execute the doctests if run from the command line.
