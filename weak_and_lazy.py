@@ -243,7 +243,7 @@ class weak_and_lazy(object):
         except KeyError:
             # On the first try this raises a KeyError, The error is
             # caught to write the new entry into the instance
-            # dictionary. 
+            # dictionary.
             data = ref()
             instance.__dict__[self.key] = data
         return data
@@ -271,7 +271,8 @@ class weak_and_lazy(object):
             ref = None
         if ref is None:
             ref = self.loader(instance, *data.args, **data.kwargs)
-            data.ref = weakref.ref(ref)
+            if ref is not None:
+                data.ref = weakref.ref(ref)
         return ref
 
 
